@@ -190,7 +190,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const BluetoothPage(),
+                                builder: (context) => const DiscoveryPage(),
                               )).then((value) => _controller.resumePreview());
                         },
                         icon: const Icon(

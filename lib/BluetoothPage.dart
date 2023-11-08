@@ -1,10 +1,5 @@
-import 'dart:async';
 import 'dart:io';
-
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:gallery_saver/gallery_saver.dart';
-
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BluetoothPage extends StatefulWidget {
@@ -35,7 +30,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
 // note: for iOS the initial state is typically BluetoothAdapterState.unknown
 // note: if you have permissions issues you will get stuck at BluetoothAdapterState.unauthorized
     FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
-      print(state);
+      // print(state);
       if (state == BluetoothAdapterState.on) {
         // usually start scanning, connecting, etc
       } else {
@@ -75,7 +70,6 @@ class _BluetoothPageState extends State<BluetoothPage> {
     );
   }
 }
-
 
 class BTDevice extends StatefulWidget {
   const BTDevice({super.key, required this.device_Name});
@@ -127,22 +121,22 @@ class _BTDeviceState extends State<BTDevice> {
               ),
               isConnecting
                   ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                ),
-              )
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    )
                   : (isConnected
-                  ? const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Icon(Icons.check),
-              )
-                  : const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: CircularProgressIndicator(
-                  color: Colors.transparent,
-                ),
-              ))
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: Icon(Icons.check),
+                        )
+                      : const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20),
+                          child: CircularProgressIndicator(
+                            color: Colors.transparent,
+                          ),
+                        ))
             ],
           ),
         ),

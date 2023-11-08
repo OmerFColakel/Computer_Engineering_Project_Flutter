@@ -1,6 +1,5 @@
 import 'dart:async';
 
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery_saver/gallery_saver.dart';
@@ -162,7 +161,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           await _initializeControllerFuture;
                           if (isVideoOn) {
                             final video =
-                            await _controller.stopVideoRecording();
+                                await _controller.stopVideoRecording();
                             setState(() {
                               isVideoOn = false;
                             });
@@ -209,7 +208,6 @@ class TakePictureScreenState extends State<TakePictureScreen>
         });
   }
 }
-
 
 SnackBar snackBar(String message) {
   return SnackBar(

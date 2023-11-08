@@ -3,9 +3,6 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:gallery_saver/gallery_saver.dart';
-
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'CameraScreen.dart';
 
@@ -26,7 +23,7 @@ Future<List<CameraDescription>> getCamera() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key, required this.cameras}) : super(key: key);
-  final List<CameraDescription> cameras;  // Available cameras
+  final List<CameraDescription> cameras; // Available cameras
 
   // This widget is the root of your application.
   @override
@@ -40,25 +37,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
-class DisplayPictureScreen extends StatelessWidget {
-  final String imagePath;
-
-  const DisplayPictureScreen({super.key, required this.imagePath});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Display the Picture')),
-      // The image is stored as a file on the device. Use the `Image.file`
-      // constructor with the given path to display the image.
-      body: Image.file(File(imagePath)),
-    );
-  }
-}
-
-
-
-
-

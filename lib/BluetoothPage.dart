@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-//import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
 
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+
 /*
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 class BluetoothPage extends StatefulWidget {
   const BluetoothPage({super.key});
 
@@ -153,7 +155,7 @@ class _BTDeviceState extends State<BTDevice> {
 
 
 
-
+/*
 class BluetoothDeviceListEntry extends ListTile {
   BluetoothDeviceListEntry({
     required BluetoothDevice device,
@@ -321,3 +323,7 @@ class _DiscoveryPage extends State<DiscoveryPage> {
     );
   }
 }
+*/
+
+
+

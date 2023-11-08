@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:ceng2/SelectBondedDevice.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 
@@ -190,7 +191,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const DiscoveryPage(),
+                                builder: (context) => const SelectBondedDevicePage(),
                               )).then((value) => _controller.resumePreview());
                         },
                         icon: const Icon(

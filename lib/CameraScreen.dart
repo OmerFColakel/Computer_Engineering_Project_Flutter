@@ -77,13 +77,37 @@ class TakePictureScreenState extends State<TakePictureScreen>
       // Define the resolution to use.
       ResolutionPreset.ultraHigh,
     );
-    BluetoothConnection.toAddress(server.address).then((_connection) {
+    // BluetoothConnection.toAddress(server.address).then((_connection) {
+    //   print('Connected to the device');
+    //   connection = _connection;
+    //   setState(() {
+    //     isConnecting = false;
+    //     isDisconnecting = false;
+    //   });
+
+    //   connection!.input!.listen(_onDataReceived).onDone(() {
+    //     if (isDisconnecting) {
+    //       print('Disconnecting locally!');
+    //     } else {
+    //       print('Disconnected remotely!');
+    //     }
+    //     if (this.mounted) {
+    //       setState(() {});
+    //     }
+    //   });
+    // }).catchError((error) {
+    //   print('Cannot connect, exception occured');
+    //   print(error);
+    // });
+
+    // Next, initialize the controller. This returns a Future.
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  Future<void> _initializeBluetooth() async {
+    try {
+      connection = await BluetoothConnection.toAddress(server.address);
       print('Connected to the device');
-      connection = _connection;
-      setState(() {
-        isConnecting = false;
-        isDisconnecting = false;
-      });
 
       connection!.input!.listen(_onDataReceived).onDone(() {
         if (isDisconnecting) {
@@ -91,17 +115,11 @@ class TakePictureScreenState extends State<TakePictureScreen>
         } else {
           print('Disconnected remotely!');
         }
-        if (this.mounted) {
-          setState(() {});
-        }
       });
-    }).catchError((error) {
-      print('Cannot connect, exception occured');
+    } catch (error) {
+      print('Cannot connect, exception occurred');
       print(error);
-    });
-
-    // Next, initialize the controller. This returns a Future.
-    _initializeControllerFuture = _controller.initialize();
+    }
   }
 
   @override
@@ -172,14 +190,33 @@ class TakePictureScreenState extends State<TakePictureScreen>
                     ),
                     IconButton(
                         onPressed: () async {
-                          _controller.pausePreview();
-                          server = await Navigator.of(context)
-                              .push(MaterialPageRoute(builder: (context) {
-                            return SelectBondedDevicePage();
-                          })).then((value) {
-                            _controller.resumePreview();
-                            return value;
-                          });
+                          //   _controller.pausePreview();
+                          //   server = await Navigator.of(context)
+                          //       .push(MaterialPageRoute(builder: (context) {
+                          //     return SelectBondedDevicePage();
+                          //   })).then((value) {
+                          //     _controller.resumePreview();
+                          //     return value;
+                          //   });
+                          // },
+                          final BluetoothDevice? selectedDevice =
+                              await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) {
+                                return SelectBondedDevicePage(
+                                    checkAvailability: false);
+                              },
+                            ),
+                          );
+
+                          if (selectedDevice != null) {
+                            print('Connect -> selected ' +
+                                selectedDevice.address);
+                            server = selectedDevice;
+                            _initializeBluetooth();
+                          } else {
+                            print('Connect -> no device selected');
+                          }
                         },
                         icon: const Icon(
                           Icons.bluetooth,
@@ -343,29 +380,50 @@ class TakePictureScreenState extends State<TakePictureScreen>
   }
 
   void _onDataReceived(Uint8List data) async {
-    try {
-      BluetoothConnection connection =
-          await BluetoothConnection.toAddress(server.address);
-      print('Connected to the device');
-      connection.input!.listen(_onDataReceived).onDone(() {
-        String received_data = String.fromCharCodes(data);
-        if (received_data == "1")
-          takeImage();
-        else if (received_data == "2") takeVideo();
-        print("Received data: " + received_data);
-        if (isDisconnecting) {
-          print('Disconnecting locally!');
-        } else {
-          print('Disconnected remotely!');
-        }
-        if (this.mounted) {
-          setState(() {});
-        }
-      });
-    } catch (e) {
-      print(e);
+    // Process the received data here
+    String dataString = String.fromCharCodes(data);
+    String signal = dataString.trim();
+    if (signal == "1") {
+      print("Signal 1 received");
+      signal = "1";
+      // Trigger camera functionality
+      takeImage();
+    } else if (signal == "2") {
+      print("Signal 2 received");
+      signal = "2";
+      // Trigger camera functionality
+      changeCamera();
+    } else if (signal == "3") {
+      print("Signal 3 received");
+      signal = "3";
+      // Trigger camera functionality
+      takeVideo();
     }
   }
+  // void _onDataReceived(Uint8List data) async {
+  //   try {
+  //     BluetoothConnection connection =
+  //         await BluetoothConnection.toAddress(server.address);
+  //     print('Connected to the device');
+  //     connection.input!.listen(_onDataReceived).onDone(() {
+  //       String received_data = String.fromCharCodes(data);
+  //       if (received_data == "1")
+  //         takeImage();
+  //       else if (received_data == "2") takeVideo();
+  //       print("Received data: " + received_data);
+  //       if (isDisconnecting) {
+  //         print('Disconnecting locally!');
+  //       } else {
+  //         print('Disconnected remotely!');
+  //       }
+  //       if (this.mounted) {
+  //         setState(() {});
+  //       }
+  //     });
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
 }
 
 SnackBar snackBar(String message) {

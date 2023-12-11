@@ -23,6 +23,8 @@ Future<List<CameraDescription>> getCamera() async {
 class MyApp extends StatelessWidget {
   const MyApp({Key? key, required this.cameras}) : super(key: key);
   final List<CameraDescription> cameras; // Available cameras
+  final int portNUmberForWifi = 8080;
+  final String ipAddressForWifi = '192.168.1.33';
 
   // This widget is the root of your application.
   @override
@@ -32,7 +34,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
           primarySwatch: Colors.blue, backgroundColor: Colors.grey[900]),
-      home: TakePictureScreen(cameras: cameras),
+      home: TakePictureScreen(
+          cameras: cameras,
+          portNumberForWifi: portNUmberForWifi,
+          ipAddressForWifi: ipAddressForWifi),
     );
   }
 }

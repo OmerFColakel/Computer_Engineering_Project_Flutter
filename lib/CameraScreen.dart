@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:gallery_saver/gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'SelectBondedDevicePage.dart';
 
@@ -67,8 +67,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
 
   @override
   void initState() {
+    print("got ipaddress: " + widget.ipAddressForWifi);
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
     // To display the current output from the Camera,
     // create a CameraController.
     _controller = CameraController(
@@ -77,13 +79,14 @@ class TakePictureScreenState extends State<TakePictureScreen>
       // Define the resolution to use.
       ResolutionPreset.ultraHigh,
     );
-    BluetoothConnection.toAddress(server.address).then((_connection) {
+    // Next, initialize the controller. This returns a Future.
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  Future<void> _initializeBluetooth() async {
+    try {
+      connection = await BluetoothConnection.toAddress(server.address);
       print('Connected to the device');
-      connection = _connection;
-      setState(() {
-        isConnecting = false;
-        isDisconnecting = false;
-      });
 
       connection!.input!.listen(_onDataReceived).onDone(() {
         if (isDisconnecting) {
@@ -91,17 +94,11 @@ class TakePictureScreenState extends State<TakePictureScreen>
         } else {
           print('Disconnected remotely!');
         }
-        if (this.mounted) {
-          setState(() {});
-        }
       });
-    }).catchError((error) {
-      print('Cannot connect, exception occured');
+    } catch (error) {
+      print('Cannot connect, exception occurred');
       print(error);
-    });
-
-    // Next, initialize the controller. This returns a Future.
-    _initializeControllerFuture = _controller.initialize();
+    }
   }
 
   @override
@@ -172,14 +169,45 @@ class TakePictureScreenState extends State<TakePictureScreen>
                     ),
                     IconButton(
                         onPressed: () async {
-                          _controller.pausePreview();
-                          server = await Navigator.of(context)
-                              .push(MaterialPageRoute(builder: (context) {
-                            return SelectBondedDevicePage();
-                          })).then((value) {
-                            _controller.resumePreview();
-                            return value;
-                          });
+                          var btScanStatus =
+                              await Permission.bluetoothScan.status;
+                          var btConnectStatus =
+                              await Permission.bluetoothConnect.status;
+                          print("btScanStatus: " + btScanStatus.toString());
+                          print("btConnectStatus: " + btConnectStatus.toString());
+                          if (btScanStatus.isDenied ||
+                              btScanStatus.isPermanentlyDenied ||
+                              btConnectStatus.isDenied ||
+                              btConnectStatus.isPermanentlyDenied) {
+                            await Permission.bluetoothScan.request();
+                            await Permission.bluetoothConnect.request();
+                          }
+
+                          if ((btScanStatus.isGranted ||
+                                  btScanStatus.isLimited ||
+                                  btScanStatus.isRestricted) &&
+                              (btConnectStatus.isGranted ||
+                                  btConnectStatus.isLimited ||
+                                  btConnectStatus.isRestricted)) {
+                            final BluetoothDevice? selectedDevice =
+                                await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return SelectBondedDevicePage(
+                                      checkAvailability: false);
+                                },
+                              ),
+                            );
+
+                            if (selectedDevice != null) {
+                              print('Connect -> selected ' +
+                                  selectedDevice.address);
+                              server = selectedDevice;
+                              _initializeBluetooth();
+                            } else {
+                              print('Connect -> no device selected');
+                            }
+                          }
                         },
                         icon: const Icon(
                           Icons.bluetooth,
@@ -238,9 +266,23 @@ class TakePictureScreenState extends State<TakePictureScreen>
           ':' +
           socket.remotePort.toString());
       File file = File(path);
-      int fileSize = file.lengthSync();
-      final String out = fileSize.toString() + "-Image";
-      socket.write(out);
+      //{ "fileType" : "Image", "fileExtension": "jpg", "totalSize": "123456", "expectedChecksum": "123456}"
+      /*print("File extension: " + file.path.split(".").last);
+      print("File size: " + file.lengthSync().toString());
+      print("File calculated sum:" + crc32(file.readAsBytesSync()).toString());
+      int fileSize = file.lengthSync();*/
+      final String out = "{fileType:\"image\",fileExtension:\"" +
+          file.path.split(".").last +
+          "\",totalSize:" +
+          file.lengthSync().toString() +
+          ",expectedChecksum:" +
+          crc32(file.readAsBytesSync()).toString() +
+          "}";
+      // convert out.legth to uint32 and write to socket
+
+      socket.write(out.length);
+      socket.write(out.toString());
+
       print('out: ' + out);
 
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
@@ -343,28 +385,36 @@ class TakePictureScreenState extends State<TakePictureScreen>
   }
 
   void _onDataReceived(Uint8List data) async {
-    try {
-      BluetoothConnection connection =
-          await BluetoothConnection.toAddress(server.address);
-      print('Connected to the device');
-      connection.input!.listen(_onDataReceived).onDone(() {
-        String received_data = String.fromCharCodes(data);
-        if (received_data == "1")
-          takeImage();
-        else if (received_data == "2") takeVideo();
-        print("Received data: " + received_data);
-        if (isDisconnecting) {
-          print('Disconnecting locally!');
-        } else {
-          print('Disconnected remotely!');
-        }
-        if (this.mounted) {
-          setState(() {});
-        }
-      });
-    } catch (e) {
-      print(e);
+    // Process the received data here
+    String dataString = String.fromCharCodes(data);
+    String signal = dataString.trim();
+    if (signal == "1") {
+      print("Signal 1 received");
+      signal = "1";
+      // Trigger camera functionality
+      takeImage();
+    } else if (signal == "2") {
+      print("Signal 2 received");
+      signal = "2";
+      // Trigger camera functionality
+      changeCamera();
+    } else if (signal == "3") {
+      print("Signal 3 received");
+      signal = "3";
+      // Trigger camera functionality
+      takeVideo();
     }
+  }
+
+  int crc32(List<int> data) {
+    int crc = 0xFFFFFFFF;
+    for (int byte in data) {
+      crc ^= byte;
+      for (int k = 0; k < 8; k++) {
+        crc = (crc & 1) == 1 ? (crc >> 1) ^ 0xEDB88320 : crc >> 1;
+      }
+    }
+    return crc ^ 0xFFFFFFFF;
   }
 }
 

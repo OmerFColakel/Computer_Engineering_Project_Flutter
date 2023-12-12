@@ -1,30 +1,21 @@
 import 'dart:async';
-
+import 'package:ceng2/ServerRequestPage.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'CameraScreen.dart';
 
 void main() {
-  List<CameraDescription> cameras = [];
-
-  getCamera()
-      .then((value) => {cameras = value, runApp(MyApp(cameras: cameras))});
-  // runApp(MyApp(cameras: cameras));
+  runApp(MyApp());
 }
 
 // Gets the list of available cameras.
-Future<List<CameraDescription>> getCamera() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final cameras = await availableCameras();
-  return cameras;
-}
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key, required this.cameras}) : super(key: key);
-  final List<CameraDescription> cameras; // Available cameras
+  const MyApp({Key? key}) : super(key: key);
   final int portNUmberForWifi = 8080;
-  final String ipAddressForWifi = '192.168.1.33';
+  final String ipAddressForWifi = '10.1.240.225';
 
   // This widget is the root of your application.
   @override
@@ -34,10 +25,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
           primarySwatch: Colors.blue, backgroundColor: Colors.grey[900]),
-      home: TakePictureScreen(
-          cameras: cameras,
-          portNumberForWifi: portNUmberForWifi,
-          ipAddressForWifi: ipAddressForWifi),
+      home: ServerRequestPage(),
     );
   }
 }

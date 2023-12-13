@@ -170,11 +170,12 @@ class TakePictureScreenState extends State<TakePictureScreen>
                     IconButton(
                         onPressed: () async {
                           var btScanStatus =
-                              await Permission.bluetoothScan.status;
+                          await Permission.bluetoothScan.status;
                           var btConnectStatus =
-                              await Permission.bluetoothConnect.status;
+                          await Permission.bluetoothConnect.status;
                           print("btScanStatus: " + btScanStatus.toString());
-                          print("btConnectStatus: " + btConnectStatus.toString());
+                          print(
+                              "btConnectStatus: " + btConnectStatus.toString());
                           if (btScanStatus.isDenied ||
                               btScanStatus.isPermanentlyDenied ||
                               btConnectStatus.isDenied ||
@@ -184,13 +185,13 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           }
 
                           if ((btScanStatus.isGranted ||
-                                  btScanStatus.isLimited ||
-                                  btScanStatus.isRestricted) &&
+                              btScanStatus.isLimited ||
+                              btScanStatus.isRestricted) &&
                               (btConnectStatus.isGranted ||
                                   btConnectStatus.isLimited ||
                                   btConnectStatus.isRestricted)) {
                             final BluetoothDevice? selectedDevice =
-                                await Navigator.of(context).push(
+                            await Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) {
                                   return SelectBondedDevicePage(
@@ -234,7 +235,18 @@ class TakePictureScreenState extends State<TakePictureScreen>
           socket.remotePort.toString());
       File file = File(path);
       int fileSize = file.lengthSync();
-      final String out = fileSize.toString() + "-Video";
+      final String out = "{fileType:\"video\",fileExtension:\"" +
+          file.path
+              .split(".")
+              .last +
+          "\",totalSize:" +
+          file.lengthSync().toString() +
+          ",expectedChecksum:" +
+          crc32(file.readAsBytesSync()).toString() +
+          "}";
+      // convert out.legth to uint32 and write to socket
+
+      socket.write(out.length);
       socket.write(out);
 
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
@@ -266,13 +278,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
           ':' +
           socket.remotePort.toString());
       File file = File(path);
-      //{ "fileType" : "Image", "fileExtension": "jpg", "totalSize": "123456", "expectedChecksum": "123456}"
-      /*print("File extension: " + file.path.split(".").last);
-      print("File size: " + file.lengthSync().toString());
-      print("File calculated sum:" + crc32(file.readAsBytesSync()).toString());
-      int fileSize = file.lengthSync();*/
       final String out = "{fileType:\"image\",fileExtension:\"" +
-          file.path.split(".").last +
+          file.path
+              .split(".")
+              .last +
           "\",totalSize:" +
           file.lengthSync().toString() +
           ",expectedChecksum:" +
@@ -368,13 +377,13 @@ class TakePictureScreenState extends State<TakePictureScreen>
     }
     if (flag) {
       _controller = CameraController(
-          // Get a specific camera from the list of available cameras.
+        // Get a specific camera from the list of available cameras.
           widget.cameras[1],
           // Define the resolution to use.
           _controller.resolutionPreset);
     } else {
       _controller = CameraController(
-          // Get a specific camera from the list of available cameras.
+        // Get a specific camera from the list of available cameras.
           widget.cameras[0],
           // Define the resolution to use.
           _controller.resolutionPreset);

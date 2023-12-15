@@ -38,9 +38,9 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
       body: Container(
         color: Colors.grey[900],
         padding: const EdgeInsets.only(left: 32, right: 32),
-        child: Column(
+        child: ListView(
           children: [
-            ImageIcon(
+            const ImageIcon(
               AssetImage("assets/main_logo.png"),
               size: 300,
               color: Colors.white,
@@ -61,7 +61,7 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
                   borderSide: BorderSide(color: Colors.white),
                 ),
               ),
-              style:  TextStyle(color: Colors.grey[900]),
+              style: TextStyle(color: Colors.grey[300]),
               onSubmitted: (value) async {
                 Future<String> returnedValue = tryConnection(value);
                 String result = await returnedValue;

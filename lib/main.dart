@@ -1,13 +1,8 @@
-import 'dart:async';
 import 'package:ceng2/ServerRequestPage.dart';
-import 'package:network_info_plus/network_info_plus.dart';
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'CameraScreen.dart';
-
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 // Gets the list of available cameras.
@@ -25,7 +20,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
           primarySwatch: Colors.blue, backgroundColor: Colors.grey[900]),
-      home: ServerRequestPage(),
+      home: const ServerRequestPage(),
     );
   }
 }

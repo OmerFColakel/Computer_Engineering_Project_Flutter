@@ -37,37 +37,13 @@ class TakePictureScreenState extends State<TakePictureScreen>
   bool isDisconnecting = false;
   bool isConnecting = true;
   BluetoothConnection? connection;
+  double elevation = 0.0;
 
   bool get isConnected => (connection?.isConnected ?? false);
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    setState(() {
-      _notification = state;
-    });
-
-    switch (_notification) {
-      case AppLifecycleState.resumed:
-        _controller.resumePreview();
-        break;
-      case AppLifecycleState.inactive:
-        _controller.pausePreview();
-        break;
-      case AppLifecycleState.paused:
-        _controller.pausePreview();
-        break;
-      case AppLifecycleState.detached:
-        _controller.pausePreview();
-        break;
-
-      case null:
-        break;
-    }
-  }
-
-  @override
   void initState() {
-    print("got ipaddress: " + widget.ipAddressForWifi);
+    //print("got ipaddress: " + widget.ipAddressForWifi);
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
@@ -86,18 +62,18 @@ class TakePictureScreenState extends State<TakePictureScreen>
   Future<void> _initializeBluetooth() async {
     try {
       connection = await BluetoothConnection.toAddress(server.address);
-      print('Connected to the device');
+      //print('Connected to the device');
 
       connection!.input!.listen(_onDataReceived).onDone(() {
         if (isDisconnecting) {
-          print('Disconnecting locally!');
+          // print('Disconnecting locally!');
         } else {
-          print('Disconnected remotely!');
+          //print('Disconnected remotely!');
         }
       });
     } catch (error) {
-      print('Cannot connect, exception occurred');
-      print(error);
+      //print('Cannot connect, exception occurred');
+      //print(error);
     }
   }
 
@@ -118,6 +94,8 @@ class TakePictureScreenState extends State<TakePictureScreen>
           if (snapshot.connectionState == ConnectionState.done) {
             // If the Future is complete, display the preview.
             return Scaffold(
+              extendBody: true,
+              extendBodyBehindAppBar: true,
               appBar: AppBar(
                 title: const Text('VisionVortex'),
                 actions: [
@@ -126,21 +104,20 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           ? Icons.flash_on_outlined
                           : Icons.flash_off_outlined)),
                       onPressed: () {
-                        setState(() {
-                          isFlashOn = !isFlashOn;
-                          _controller.setFlashMode(
-                              isFlashOn ? FlashMode.torch : FlashMode.off);
-                        });
+                        setFlash();
                       }),
                 ],
-                backgroundColor: Colors.grey[900],
+                backgroundColor: Colors.transparent,
+                elevation: elevation,
               ),
-              backgroundColor: Colors.grey[900],
-              body: Center(
-                child: CameraPreview(_controller),
-              ),
+              backgroundColor: Colors.black,
+              body: Center(child: CameraPreview(_controller)
+                  // stop the splash effect
+
+                  ),
               bottomNavigationBar: BottomAppBar(
-                color: Colors.grey[900],
+                color: Colors.transparent,
+                elevation: elevation,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -170,12 +147,12 @@ class TakePictureScreenState extends State<TakePictureScreen>
                     IconButton(
                         onPressed: () async {
                           var btScanStatus =
-                          await Permission.bluetoothScan.status;
+                              await Permission.bluetoothScan.status;
                           var btConnectStatus =
-                          await Permission.bluetoothConnect.status;
-                          print("btScanStatus: " + btScanStatus.toString());
-                          print(
-                              "btConnectStatus: " + btConnectStatus.toString());
+                              await Permission.bluetoothConnect.status;
+                          //print("btScanStatus: " + btScanStatus.toString());
+                          //print(
+                          //    "btConnectStatus: " + btConnectStatus.toString());
                           if (btScanStatus.isDenied ||
                               btScanStatus.isPermanentlyDenied ||
                               btConnectStatus.isDenied ||
@@ -185,28 +162,28 @@ class TakePictureScreenState extends State<TakePictureScreen>
                           }
 
                           if ((btScanStatus.isGranted ||
-                              btScanStatus.isLimited ||
-                              btScanStatus.isRestricted) &&
+                                  btScanStatus.isLimited ||
+                                  btScanStatus.isRestricted) &&
                               (btConnectStatus.isGranted ||
                                   btConnectStatus.isLimited ||
                                   btConnectStatus.isRestricted)) {
                             final BluetoothDevice? selectedDevice =
-                            await Navigator.of(context).push(
+                                await Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (context) {
-                                  return SelectBondedDevicePage(
+                                  return const SelectBondedDevicePage(
                                       checkAvailability: false);
                                 },
                               ),
                             );
 
                             if (selectedDevice != null) {
-                              print('Connect -> selected ' +
-                                  selectedDevice.address);
+                              /*print('Connect -> selected ' +
+                                  selectedDevice.address);*/
                               server = selectedDevice;
                               _initializeBluetooth();
                             } else {
-                              print('Connect -> no device selected');
+                              //print('Connect -> no device selected');
                             }
                           }
                         },
@@ -225,29 +202,29 @@ class TakePictureScreenState extends State<TakePictureScreen>
         });
   }
 
+  void setFlash() {
+    setState(() {
+      isFlashOn = !isFlashOn;
+      _controller.setFlashMode(isFlashOn ? FlashMode.torch : FlashMode.off);
+    });
+  }
+
 // Send video to server
-  Future<String> sendVideo(String path, String ip_address, int port) async {
+  Future<String> sendVideo(String path, String ipAddress, int port) async {
     try {
-      final socket = await Socket.connect(ip_address, port);
-      print('Connected to:' +
+      final socket = await Socket.connect(ipAddress, port);
+      /*print('Connected to:' +
           socket.remoteAddress.address +
           ':' +
-          socket.remotePort.toString());
+          socket.remotePort.toString());*/
       File file = File(path);
-      int fileSize = file.lengthSync();
-      final String out = "{fileType:\"video\",fileExtension:\"" +
-          file.path
-              .split(".")
-              .last +
+      final String out = "fileType:\"video\",fileExtension:\"" +
+          file.path.split(".").last +
           "\",totalSize:" +
-          file.lengthSync().toString() +
-          ",expectedChecksum:" +
-          crc32(file.readAsBytesSync()).toString() +
-          "}";
-      // convert out.legth to uint32 and write to socket
+          file.lengthSync().toString();
 
-      socket.write(out.length);
-      socket.write(out);
+      socket.write(out.length.toString());
+      socket.write(out.toString());
 
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
       int bufferSize = 1024;
@@ -270,39 +247,43 @@ class TakePictureScreenState extends State<TakePictureScreen>
     return "Video sent";
   }
 
-  Future<String> sendImage(String path, String ip_address, int port) async {
+  Future<String> sendImage(String path, String ipAddress, int port) async {
     try {
-      final socket = await Socket.connect(ip_address, port);
+      final socket = await Socket.connect(ipAddress, port);
       print('Connected to:' +
           socket.remoteAddress.address +
           ':' +
           socket.remotePort.toString());
       File file = File(path);
-      final String out = "{fileType:\"image\",fileExtension:\"" +
-          file.path
-              .split(".")
-              .last +
+      final String out = "fileType:\"image\",fileExtension:\"" +
+          file.path.split(".").last +
           "\",totalSize:" +
-          file.lengthSync().toString() +
-          ",expectedChecksum:" +
-          crc32(file.readAsBytesSync()).toString() +
-          "}";
-      // convert out.legth to uint32 and write to socket
+          file.lengthSync().toString();
 
-      socket.write(out.length);
+      /*socket.add(Uint32List(1)
+        ..buffer.asByteData().setUint32(0, out.length, Endian.little));*/
+      socket.write(out.length.toString());
+      print(Uint32List(1)
+        ..buffer.asByteData().setUint32(0, out.length, Endian.little));
+      await Future.delayed(Duration(seconds: 1));
+      // socket.add out in Uint32 list format
+      //socket.add(Uint32List.fromList(out.codeUnits));
       socket.write(out.toString());
-
+      print(Uint32List.fromList(out.codeUnits));
       print('out: ' + out);
-
+      int counter = 0;
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
       int bufferSize = 1024;
       List<int> buffer = List.filled(bufferSize, 0);
+      await Future.delayed(Duration(seconds: 1));
       while (true) {
         int readBytes = raf.readIntoSync(buffer, 0, bufferSize);
+        counter += readBytes;
         if (readBytes == 0) {
+          print("Counter:" + counter.toString());
           break;
         }
-        socket.add(Uint8List.fromList(buffer.sublist(0, readBytes)));
+        socket.add(Uint32List.fromList(buffer.sublist(0, readBytes)));
       }
       raf.closeSync();
       await socket.flush();
@@ -377,13 +358,13 @@ class TakePictureScreenState extends State<TakePictureScreen>
     }
     if (flag) {
       _controller = CameraController(
-        // Get a specific camera from the list of available cameras.
+          // Get a specific camera from the list of available cameras.
           widget.cameras[1],
           // Define the resolution to use.
           _controller.resolutionPreset);
     } else {
       _controller = CameraController(
-        // Get a specific camera from the list of available cameras.
+          // Get a specific camera from the list of available cameras.
           widget.cameras[0],
           // Define the resolution to use.
           _controller.resolutionPreset);
@@ -399,19 +380,23 @@ class TakePictureScreenState extends State<TakePictureScreen>
     String signal = dataString.trim();
     if (signal == "1") {
       print("Signal 1 received");
-      signal = "1";
+
       // Trigger camera functionality
       takeImage();
-    } else if (signal == "2") {
-      print("Signal 2 received");
-      signal = "2";
+    } else if (signal == "3") {
+      //print("Signal 2 received");
+
       // Trigger camera functionality
       changeCamera();
-    } else if (signal == "3") {
-      print("Signal 3 received");
-      signal = "3";
+    } else if (signal == "2") {
+      //print("Signal 3 received");
+
       // Trigger camera functionality
       takeVideo();
+    } else if (signal == "4") {
+      setFlash();
+    } else {
+      print("Unknown signal received");
     }
   }
 
@@ -432,3 +417,117 @@ SnackBar snackBar(String message) {
     content: Text(message),
   );
 }
+
+class Chunk {
+  int size = 0;
+  int seq_num = -1;
+}
+
+/*
+Scaffold(
+              appBar: AppBar(
+                title: const Text('VisionVortex'),
+                actions: [
+                  IconButton(
+                      icon: Icon((isFlashOn
+                          ? Icons.flash_on_outlined
+                          : Icons.flash_off_outlined)),
+                      onPressed: () {
+                        setFlash();
+                      }),
+                ],
+                backgroundColor: Colors.transparent,
+              ),
+              backgroundColor: Colors.grey[900],
+              body: Center(
+                child: NotificationListener<OverscrollIndicatorNotification>(
+                  onNotification: (overscroll) {
+                    overscroll.disallowIndicator();
+                    return true;
+                  },
+                  child: ListView(
+                    children: [CameraPreview(_controller)],
+                    // stop the splash effect
+                  ),
+                ),
+              ),
+              bottomNavigationBar: BottomAppBar(
+                color: Colors.transparent,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        changeCamera();
+                      },
+                      icon: const Icon(Icons.cameraswitch_outlined),
+                      color: Colors.white,
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        takeImage();
+                      },
+                      icon: const Icon(Icons.camera_alt_outlined),
+                      color: Colors.white,
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        takeVideo();
+                      },
+                      icon: (isVideoOn
+                          ? const Icon(Icons.videocam_outlined)
+                          : const Icon(Icons.videocam_off_outlined)),
+                      color: Colors.white,
+                    ),
+                    IconButton(
+                        onPressed: () async {
+                          var btScanStatus =
+                              await Permission.bluetoothScan.status;
+                          var btConnectStatus =
+                              await Permission.bluetoothConnect.status;
+                          //print("btScanStatus: " + btScanStatus.toString());
+                          //print(
+                          //    "btConnectStatus: " + btConnectStatus.toString());
+                          if (btScanStatus.isDenied ||
+                              btScanStatus.isPermanentlyDenied ||
+                              btConnectStatus.isDenied ||
+                              btConnectStatus.isPermanentlyDenied) {
+                            await Permission.bluetoothScan.request();
+                            await Permission.bluetoothConnect.request();
+                          }
+
+                          if ((btScanStatus.isGranted ||
+                                  btScanStatus.isLimited ||
+                                  btScanStatus.isRestricted) &&
+                              (btConnectStatus.isGranted ||
+                                  btConnectStatus.isLimited ||
+                                  btConnectStatus.isRestricted)) {
+                            final BluetoothDevice? selectedDevice =
+                                await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) {
+                                  return const SelectBondedDevicePage(
+                                      checkAvailability: false);
+                                },
+                              ),
+                            );
+
+                            if (selectedDevice != null) {
+                              /*print('Connect -> selected ' +
+                                  selectedDevice.address);*/
+                              server = selectedDevice;
+                              _initializeBluetooth();
+                            } else {
+                              //print('Connect -> no device selected');
+                            }
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.bluetooth,
+                          color: Colors.white,
+                        ))
+                  ],
+                ),
+              ),
+            );
+ */

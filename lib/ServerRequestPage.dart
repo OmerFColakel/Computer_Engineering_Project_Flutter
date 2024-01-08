@@ -12,19 +12,26 @@ class ServerRequestPage extends StatefulWidget {
 }
 
 class _ServerRequestPageState extends State<ServerRequestPage> {
-  late TextEditingController _controller;
+  late TextEditingController _ipController;
+  late TextEditingController _usernameController;
+  late TextEditingController _eventNameController;
+
   List<CameraDescription> cameras = [];
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _ipController = TextEditingController();
+    _usernameController = TextEditingController();
+    _eventNameController = TextEditingController();
     getCamera().then((value) => {cameras = value});
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ipController.dispose();
+    _usernameController.dispose();
+    _eventNameController.dispose();
     super.dispose();
   }
 
@@ -45,70 +52,148 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
               size: 300,
               color: Colors.white,
             ),
-            TextField(
-              keyboardType: TextInputType.number,
-              controller: _controller,
-              cursorColor: Colors.white,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Enter an IP Address',
-                labelStyle: TextStyle(color: Colors.white),
-                focusColor: Colors.white,
-                hoverColor: Colors.white,
-                fillColor: Colors.grey[700],
-                filled: true,
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: _ipController,
+                cursorColor: Colors.white,
+                decoration: buildInputDecoration("Enter an IP Address"),
+                style: TextStyle(color: Colors.grey[300]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextField(
+                controller: _usernameController,
+                cursorColor: Colors.white,
+                decoration: buildInputDecoration("Enter a Username"),
+                style: TextStyle(color: Colors.grey[300]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextField(
+                controller: _eventNameController,
+                cursorColor: Colors.white,
+                decoration: buildInputDecoration("Enter an Event Name"),
+                style: TextStyle(color: Colors.grey[300]),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: 100,
+                height: 50,
+                child: TextButton(
+                  onPressed: textButtonPressed,
+                  style: ButtonStyle(
+                    backgroundColor:
+                        MaterialStateProperty.all(Colors.grey[700]),
+                  ),
+                  child: const Text(
+                    "Connect",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
-              style: TextStyle(color: Colors.grey[300]),
-              onSubmitted: (value) async {
-                Future<String> returnedValue = tryConnection(value);
-                String result = await returnedValue;
-                if (result != "Error") {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) {
-                        return TakePictureScreen(
-                            cameras: cameras,
-                            portNumberForWifi: 8080,
-                            ipAddressForWifi: result);
-                      },
-                    ),
-                  );
-                } else {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Error'),
-                        content: Text('Could not connect to $value'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                }
-              },
             ),
           ],
         ),
       ),
     );
   }
+
+  InputDecoration buildInputDecoration(String labelText) {
+    return InputDecoration(
+      border: const OutlineInputBorder(),
+      labelText: labelText,
+      labelStyle: const TextStyle(color: Colors.white),
+      focusColor: Colors.white,
+      hoverColor: Colors.white,
+      fillColor: Colors.grey[700],
+      filled: true,
+      focusedBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.white),
+      ),
+    );
+  }
+
+  Future<int> enterToApp(String ipAddress, String eventname) async {
+    Future<String> returnedValue = tryConnection(ipAddress, eventname);
+    String result = await returnedValue;
+    if (result != "Error") {
+      return 1;
+    }
+    return -1;
+  }
+
+  void textButtonPressed() async {
+    if (_ipController.text.isEmpty ||
+        _eventNameController.text.isEmpty ||
+        _usernameController.text.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: const Text('Please fill all the fields'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+    int value = await enterToApp(_ipController.text, _eventNameController.text);
+    if (value == 1) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) {
+            return TakePictureScreen(
+                cameras: cameras,
+                portNumberForWifi: 8080,
+                ipAddressForWifi: _ipController.text,
+                username: _usernameController.text);
+          },
+        ),
+      );
+    } else if (value == -1) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: Text('Could not connect to ${_ipController.text}'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
 }
 
-Future<String> tryConnection(String ipAddress) async {
+Future<String> tryConnection(String ipAddress, String eventname) async {
   try {
     Socket socket = await Socket.connect(ipAddress, 8080);
     print('Connected to: '
         '${socket.remoteAddress.address}:${socket.remotePort}');
+    String message = "Eventname: $eventname";
+    socket.write(message.length.toString());
+    socket.write(message);
     socket.destroy();
     return ipAddress;
   } catch (e) {

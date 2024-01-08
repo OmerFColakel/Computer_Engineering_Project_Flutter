@@ -11,16 +11,17 @@ import 'SelectBondedDevicePage.dart';
 
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
-  const TakePictureScreen({
-    super.key,
-    required this.cameras,
-    required this.portNumberForWifi,
-    required this.ipAddressForWifi,
-  });
+  const TakePictureScreen(
+      {super.key,
+      required this.cameras,
+      required this.portNumberForWifi,
+      required this.ipAddressForWifi,
+      required this.username});
 
   final List<CameraDescription> cameras;
   final int portNumberForWifi;
   final String ipAddressForWifi;
+  final String username;
 
   @override
   TakePictureScreenState createState() => TakePictureScreenState();
@@ -28,7 +29,6 @@ class TakePictureScreen extends StatefulWidget {
 
 class TakePictureScreenState extends State<TakePictureScreen>
     with WidgetsBindingObserver {
-  AppLifecycleState? _notification;
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   late BluetoothDevice server;
@@ -40,6 +40,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
   double elevation = 0.0;
 
   bool get isConnected => (connection?.isConnected ?? false);
+  bool isBTCOn = false;
 
   @override
   void initState() {
@@ -182,14 +183,20 @@ class TakePictureScreenState extends State<TakePictureScreen>
                                   selectedDevice.address);*/
                               server = selectedDevice;
                               _initializeBluetooth();
+                              setState(() {
+                                isBTCOn = true;
+                              });
                             } else {
                               //print('Connect -> no device selected');
+                              setState(() {
+                                isBTCOn = false;
+                              });
                             }
                           }
                         },
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.bluetooth,
-                          color: Colors.white,
+                          color: isBTCOn ? Colors.green : Colors.white,
                         ))
                   ],
                 ),
@@ -221,7 +228,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
       final String out = "fileType:\"video\",fileExtension:\"" +
           file.path.split(".").last +
           "\",totalSize:" +
-          file.lengthSync().toString();
+          file.lengthSync().toString() +
+          ",username:\"" +
+          widget.username +
+          "\"";
 
       socket.write(out.length.toString());
       socket.write(out.toString());
@@ -234,7 +244,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
         if (readBytes == 0) {
           break;
         }
-        socket.add(Uint8List.fromList(buffer.sublist(0, readBytes)));
+        socket.add(Uint32List.fromList(buffer.sublist(0, readBytes)));
       }
       raf.closeSync();
       await socket.flush();
@@ -258,7 +268,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
       final String out = "fileType:\"image\",fileExtension:\"" +
           file.path.split(".").last +
           "\",totalSize:" +
-          file.lengthSync().toString();
+          file.lengthSync().toString() +
+          ",username:\"" +
+          widget.username +
+          "\"";
 
       /*socket.add(Uint32List(1)
         ..buffer.asByteData().setUint32(0, out.length, Endian.little));*/
@@ -422,112 +435,3 @@ class Chunk {
   int size = 0;
   int seq_num = -1;
 }
-
-/*
-Scaffold(
-              appBar: AppBar(
-                title: const Text('VisionVortex'),
-                actions: [
-                  IconButton(
-                      icon: Icon((isFlashOn
-                          ? Icons.flash_on_outlined
-                          : Icons.flash_off_outlined)),
-                      onPressed: () {
-                        setFlash();
-                      }),
-                ],
-                backgroundColor: Colors.transparent,
-              ),
-              backgroundColor: Colors.grey[900],
-              body: Center(
-                child: NotificationListener<OverscrollIndicatorNotification>(
-                  onNotification: (overscroll) {
-                    overscroll.disallowIndicator();
-                    return true;
-                  },
-                  child: ListView(
-                    children: [CameraPreview(_controller)],
-                    // stop the splash effect
-                  ),
-                ),
-              ),
-              bottomNavigationBar: BottomAppBar(
-                color: Colors.transparent,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        changeCamera();
-                      },
-                      icon: const Icon(Icons.cameraswitch_outlined),
-                      color: Colors.white,
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        takeImage();
-                      },
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      color: Colors.white,
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        takeVideo();
-                      },
-                      icon: (isVideoOn
-                          ? const Icon(Icons.videocam_outlined)
-                          : const Icon(Icons.videocam_off_outlined)),
-                      color: Colors.white,
-                    ),
-                    IconButton(
-                        onPressed: () async {
-                          var btScanStatus =
-                              await Permission.bluetoothScan.status;
-                          var btConnectStatus =
-                              await Permission.bluetoothConnect.status;
-                          //print("btScanStatus: " + btScanStatus.toString());
-                          //print(
-                          //    "btConnectStatus: " + btConnectStatus.toString());
-                          if (btScanStatus.isDenied ||
-                              btScanStatus.isPermanentlyDenied ||
-                              btConnectStatus.isDenied ||
-                              btConnectStatus.isPermanentlyDenied) {
-                            await Permission.bluetoothScan.request();
-                            await Permission.bluetoothConnect.request();
-                          }
-
-                          if ((btScanStatus.isGranted ||
-                                  btScanStatus.isLimited ||
-                                  btScanStatus.isRestricted) &&
-                              (btConnectStatus.isGranted ||
-                                  btConnectStatus.isLimited ||
-                                  btConnectStatus.isRestricted)) {
-                            final BluetoothDevice? selectedDevice =
-                                await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) {
-                                  return const SelectBondedDevicePage(
-                                      checkAvailability: false);
-                                },
-                              ),
-                            );
-
-                            if (selectedDevice != null) {
-                              /*print('Connect -> selected ' +
-                                  selectedDevice.address);*/
-                              server = selectedDevice;
-                              _initializeBluetooth();
-                            } else {
-                              //print('Connect -> no device selected');
-                            }
-                          }
-                        },
-                        icon: const Icon(
-                          Icons.bluetooth,
-                          color: Colors.white,
-                        ))
-                  ],
-                ),
-              ),
-            );
- */

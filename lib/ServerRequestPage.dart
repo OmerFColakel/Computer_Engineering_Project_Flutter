@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:ceng2/CameraScreen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ServerRequestPage extends StatefulWidget {
   const ServerRequestPage({super.key});
@@ -15,6 +16,7 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
   late TextEditingController _ipController;
   late TextEditingController _usernameController;
   late TextEditingController _eventNameController;
+  String _myIPAddress = "";
 
   List<CameraDescription> cameras = [];
 
@@ -24,7 +26,21 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
     _ipController = TextEditingController();
     _usernameController = TextEditingController();
     _eventNameController = TextEditingController();
+    printIps();
     getCamera().then((value) => {cameras = value});
+  }
+
+  Future printIps() async {
+    for (var interface in await NetworkInterface.list()) {
+      print('== Interface: ${interface.name} ==');
+      for (var addr in interface.addresses) {
+        print(
+            '${addr.address} ${addr.host} ${addr.isLoopback} ${addr.rawAddress} ${addr.type.name}');
+      }
+      if (interface.name == "wlan0") {
+        _myIPAddress = interface.addresses.first.address;
+      }
+    }
   }
 
   @override
@@ -74,6 +90,9 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextField(
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.deny(",")
+                ],
                 controller: _eventNameController,
                 cursorColor: Colors.white,
                 decoration: buildInputDecoration("Enter an Event Name"),
@@ -157,10 +176,12 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
         MaterialPageRoute(
           builder: (context) {
             return TakePictureScreen(
-                cameras: cameras,
-                portNumberForWifi: 8080,
-                ipAddressForWifi: _ipController.text,
-                username: _usernameController.text);
+              cameras: cameras,
+              portNumberForWifi: 8080,
+              ipAddressForWifi: _ipController.text,
+              username: _usernameController.text,
+              myIPAddress: _myIPAddress,
+            );
           },
         ),
       );
@@ -191,7 +212,7 @@ Future<String> tryConnection(String ipAddress, String eventname) async {
     Socket socket = await Socket.connect(ipAddress, 8080);
     print('Connected to: '
         '${socket.remoteAddress.address}:${socket.remotePort}');
-    String message = "Eventname: $eventname";
+    String message = "Eventname: $eventname, IPAddress: $ipAddress";
     socket.write(message.length.toString());
     socket.write(message);
     socket.destroy();

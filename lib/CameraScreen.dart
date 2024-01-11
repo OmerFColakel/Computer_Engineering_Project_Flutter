@@ -16,12 +16,14 @@ class TakePictureScreen extends StatefulWidget {
       required this.cameras,
       required this.portNumberForWifi,
       required this.ipAddressForWifi,
-      required this.username});
+      required this.username,
+      required this.myIPAddress});
 
   final List<CameraDescription> cameras;
   final int portNumberForWifi;
   final String ipAddressForWifi;
   final String username;
+  final String myIPAddress;
 
   @override
   TakePictureScreenState createState() => TakePictureScreenState();
@@ -29,6 +31,7 @@ class TakePictureScreen extends StatefulWidget {
 
 class TakePictureScreenState extends State<TakePictureScreen>
     with WidgetsBindingObserver {
+  Socket? socket;
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   late BluetoothDevice server;
@@ -58,6 +61,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
     );
     // Next, initialize the controller. This returns a Future.
     _initializeControllerFuture = _controller.initialize();
+    startServer();
   }
 
   Future<void> _initializeBluetooth() async {
@@ -422,6 +426,25 @@ class TakePictureScreenState extends State<TakePictureScreen>
       }
     }
     return crc ^ 0xFFFFFFFF;
+  }
+
+  void startServer() {
+    Future<ServerSocket> serverFuture =
+        ServerSocket.bind(widget.myIPAddress, 8080);
+    serverFuture.then((ServerSocket server) {
+      server.listen((Socket socket) {
+        socket.listen((List<int> data) {
+          String result = new String.fromCharCodes(data);
+          if (result == "EndEvent") {
+            print("EndEvent received");
+            socket.close();
+            server.close();
+            Navigator.pop(context);
+            
+          }
+        });
+      });
+    });
   }
 }
 

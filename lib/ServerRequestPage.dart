@@ -71,6 +71,9 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextField(
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                ],
                 keyboardType: TextInputType.number,
                 controller: _ipController,
                 cursorColor: Colors.white,
@@ -81,6 +84,9 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextField(
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.deny(",")
+                ],
                 controller: _usernameController,
                 cursorColor: Colors.white,
                 decoration: buildInputDecoration("Enter a Username"),
@@ -139,7 +145,12 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
   }
 
   Future<int> enterToApp(String ipAddress, String eventname) async {
-    Future<String> returnedValue = tryConnection(ipAddress, eventname);
+    print("Trying to connect to $ipAddress");
+    print("Eventname: $eventname");
+    print("My IP Address: $_myIPAddress");
+
+    Future<String> returnedValue =
+        tryConnection(ipAddress, eventname, _myIPAddress);
     String result = await returnedValue;
     if (result != "Error") {
       return 1;
@@ -181,6 +192,7 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
               ipAddressForWifi: _ipController.text,
               username: _usernameController.text,
               myIPAddress: _myIPAddress,
+              eventName: _eventNameController.text,
             );
           },
         ),
@@ -207,16 +219,12 @@ class _ServerRequestPageState extends State<ServerRequestPage> {
   }
 }
 
-Future<String> tryConnection(String ipAddress, String eventname) async {
+Future<String> tryConnection(
+    String ipAddress, String eventname, String _myIPAdress) async {
   try {
     Socket socket = await Socket.connect(ipAddress, 8080);
-    print('Connected to: '
-        '${socket.remoteAddress.address}:${socket.remotePort}');
-    String message = "Eventname: $eventname, IPAddress: $ipAddress";
-    socket.write(message.length.toString());
-    socket.write(message);
     socket.destroy();
-    return ipAddress;
+    return "";
   } catch (e) {
     print(e);
   }

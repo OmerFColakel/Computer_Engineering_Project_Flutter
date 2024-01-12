@@ -17,13 +17,15 @@ class TakePictureScreen extends StatefulWidget {
       required this.portNumberForWifi,
       required this.ipAddressForWifi,
       required this.username,
-      required this.myIPAddress});
+      required this.myIPAddress,
+      required this.eventName});
 
   final List<CameraDescription> cameras;
   final int portNumberForWifi;
   final String ipAddressForWifi;
   final String username;
   final String myIPAddress;
+  final String eventName;
 
   @override
   TakePictureScreenState createState() => TakePictureScreenState();
@@ -43,7 +45,7 @@ class TakePictureScreenState extends State<TakePictureScreen>
   double elevation = 0.0;
 
   bool get isConnected => (connection?.isConnected ?? false);
-  bool isBTCOn = false;
+  bool isBTOn = false;
 
   @override
   void initState() {
@@ -186,21 +188,35 @@ class TakePictureScreenState extends State<TakePictureScreen>
                               /*print('Connect -> selected ' +
                                   selectedDevice.address);*/
                               server = selectedDevice;
-                              _initializeBluetooth();
-                              setState(() {
-                                isBTCOn = true;
-                              });
+                              _initializeBluetooth().then((value) => {
+                                    if (connection!.isConnected)
+                                      {
+                                        print('Connected to the device: ' +
+                                            server.address),
+                                        setState(() {
+                                          isBTOn = true;
+                                        })
+                                      }
+                                    else
+                                      {
+                                        print(
+                                            'Cannot connect, exception occurred'),
+                                        setState(() {
+                                          isBTOn = false;
+                                        })
+                                      }
+                                  });
                             } else {
-                              //print('Connect -> no device selected');
+                              print('Connect -> no device selected');
                               setState(() {
-                                isBTCOn = false;
+                                isBTOn = false;
                               });
                             }
                           }
                         },
                         icon: Icon(
                           Icons.bluetooth,
-                          color: isBTCOn ? Colors.green : Colors.white,
+                          color: isBTOn ? Colors.green : Colors.white,
                         ))
                   ],
                 ),
@@ -224,10 +240,6 @@ class TakePictureScreenState extends State<TakePictureScreen>
   Future<String> sendVideo(String path, String ipAddress, int port) async {
     try {
       final socket = await Socket.connect(ipAddress, port);
-      /*print('Connected to:' +
-          socket.remoteAddress.address +
-          ':' +
-          socket.remotePort.toString());*/
       File file = File(path);
       final String out = "fileType:\"video\",fileExtension:\"" +
           file.path.split(".").last +
@@ -235,6 +247,10 @@ class TakePictureScreenState extends State<TakePictureScreen>
           file.lengthSync().toString() +
           ",username:\"" +
           widget.username +
+          "\",eventName:\"" +
+          widget.eventName +
+          "\",ipAddress:\"" +
+          widget.myIPAddress +
           "\"";
 
       socket.write(out.length.toString());
@@ -264,10 +280,6 @@ class TakePictureScreenState extends State<TakePictureScreen>
   Future<String> sendImage(String path, String ipAddress, int port) async {
     try {
       final socket = await Socket.connect(ipAddress, port);
-      print('Connected to:' +
-          socket.remoteAddress.address +
-          ':' +
-          socket.remotePort.toString());
       File file = File(path);
       final String out = "fileType:\"image\",fileExtension:\"" +
           file.path.split(".").last +
@@ -275,29 +287,19 @@ class TakePictureScreenState extends State<TakePictureScreen>
           file.lengthSync().toString() +
           ",username:\"" +
           widget.username +
+          "\",eventName:\"" +
+          widget.eventName +
+          "\",ipAddress:\"" +
+          widget.myIPAddress +
           "\"";
-
-      /*socket.add(Uint32List(1)
-        ..buffer.asByteData().setUint32(0, out.length, Endian.little));*/
       socket.write(out.length.toString());
-      print(Uint32List(1)
-        ..buffer.asByteData().setUint32(0, out.length, Endian.little));
-      await Future.delayed(Duration(seconds: 1));
-      // socket.add out in Uint32 list format
-      //socket.add(Uint32List.fromList(out.codeUnits));
       socket.write(out.toString());
-      print(Uint32List.fromList(out.codeUnits));
-      print('out: ' + out);
-      int counter = 0;
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
       int bufferSize = 1024;
       List<int> buffer = List.filled(bufferSize, 0);
-      await Future.delayed(Duration(seconds: 1));
       while (true) {
         int readBytes = raf.readIntoSync(buffer, 0, bufferSize);
-        counter += readBytes;
         if (readBytes == 0) {
-          print("Counter:" + counter.toString());
           break;
         }
         socket.add(Uint32List.fromList(buffer.sublist(0, readBytes)));
@@ -417,17 +419,6 @@ class TakePictureScreenState extends State<TakePictureScreen>
     }
   }
 
-  int crc32(List<int> data) {
-    int crc = 0xFFFFFFFF;
-    for (int byte in data) {
-      crc ^= byte;
-      for (int k = 0; k < 8; k++) {
-        crc = (crc & 1) == 1 ? (crc >> 1) ^ 0xEDB88320 : crc >> 1;
-      }
-    }
-    return crc ^ 0xFFFFFFFF;
-  }
-
   void startServer() {
     Future<ServerSocket> serverFuture =
         ServerSocket.bind(widget.myIPAddress, 8080);
@@ -437,10 +428,37 @@ class TakePictureScreenState extends State<TakePictureScreen>
           String result = new String.fromCharCodes(data);
           if (result == "EndEvent") {
             print("EndEvent received");
+            isBTOn = false;
             socket.close();
             server.close();
-            Navigator.pop(context);
-            
+            showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    backgroundColor: Colors.grey[900],
+                    title: const Text(
+                      'Event Ended',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    content: const Text(
+                      'Event has been ended by the host',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  );
+                });
+            dispose();
           }
         });
       });
@@ -452,9 +470,4 @@ SnackBar snackBar(String message) {
   return SnackBar(
     content: Text(message),
   );
-}
-
-class Chunk {
-  int size = 0;
-  int seq_num = -1;
 }

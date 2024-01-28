@@ -252,6 +252,8 @@ class TakePictureScreenState extends State<TakePictureScreen>
           "\",ipAddress:\"" +
           widget.myIPAddress +
           "\"";
+      print("out size: " + out.length.toString());
+      print("out: " + out.toString());
 
       socket.write(out.length.toString());
       socket.write(out.toString());
@@ -292,6 +294,8 @@ class TakePictureScreenState extends State<TakePictureScreen>
           "\",ipAddress:\"" +
           widget.myIPAddress +
           "\"";
+      print("out size: " + out.length.toString());
+      print("out: " + out.toString());
       socket.write(out.length.toString());
       socket.write(out.toString());
       RandomAccessFile raf = file.openSync(mode: FileMode.read);
